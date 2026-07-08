@@ -1,0 +1,72 @@
+#svl
+global function main []
+    local mdb_in = 'small_cyclic/ACKR4/SC_ACKR4_prep_mini.mdb';
+    local mdb_gpcr = 'small_cyclic/ACKR4/SC_ACKR4_min_G.mdb';
+    local mdb_pep = 'small_cyclic/ACKR4/SC_ACKR4_min_p.mdb';
+
+    local db_in = db_Open [mdb_in, 'read'];
+    local db_gpcr = db_Open [mdb_gpcr, 'create'];
+    local db_pep = db_Open [mdb_pep, 'create'];
+
+    db_CreateField [db_gpcr, 'gpcr', 'moe'];
+    db_CreateField [db_gpcr, 'mseq', 'int'];
+    db_CreateField [db_pep, 'peptide', 'moe'];
+    db_CreateField [db_pep, 'mseq', 'int'];
+
+    local entries = db_Entries db_in;
+    local entry;
+    local idx = 0;
+
+    for entry in entries loop
+        idx = idx + 1;
+        local mol = db_ReadFields [db_in, entry, 'complex'];
+
+        Close [force: 1];
+        _moe_Create [mol, [selection:1, sets:1, view:1]];
+        local all_chains = Chains[];
+        local max_count = maxE cResidueCount all_chains;
+        local gpcr_chain = all_chains | cResidueCount all_chains == max_count;
+        local pep_chain  = all_chains | cResidueCount all_chains <> max_count;
+
+        // Extract GPCR - destroy peptide chain, keep GPCR
+        oDestroy cat rAtoms cat cResidues pep_chain;
+        oDestroy (Residues[] | not app length rAtoms Residues[]);
+        oDestroy (Chains[]   | not app length cResidues Chains[]);
+        local allres = Residues[];
+        aSetHidden [Atoms[], 1];
+        rSetRibbonEnable [allres, 1];
+        rSetRibbonMode [allres, 'auto'];
+        rSetRibbonColorBy [allres, 'rgb'];
+        rSetRibbonRGB [allres, 0x00CC00];
+        local gpcr_mol = _moe_Extract [Chains[], [], [selection:1, sets:1, view:1]];
+        db_Write [db_gpcr, 0, [gpcr: gpcr_mol, mseq: idx]];
+
+        // Extract peptide - reload and destroy GPCR chain, keep peptide
+        Close [force: 1];
+        _moe_Create [mol, [selection:1, sets:1, view:1]];
+        all_chains = Chains[];
+        max_count = maxE cResidueCount all_chains;
+        local gpcr_chain2 = all_chains | cResidueCount all_chains == max_count;
+
+        oDestroy cat rAtoms cat cResidues gpcr_chain2;
+        oDestroy (Residues[] | not app length rAtoms Residues[]);
+        oDestroy (Chains[]   | not app length cResidues Chains[]);
+        allres = Residues[];
+        aSetHidden [Atoms[], 1];
+        rSetRibbonEnable [allres, 1];
+        rSetRibbonMode [allres, 'auto'];
+        rSetRibbonColorBy [allres, 'rgb'];
+        rSetRibbonRGB [allres, 0x00CCCC];
+        local pep_mol = _moe_Extract [Chains[], [], [selection:1, sets:1, view:1]];
+        db_Write [db_pep, 0, [peptide: pep_mol, mseq: idx]];
+
+        Close [force: 1];
+        print twrite ['Entry {} done.', idx];
+    endloop
+
+    Close [force: 1];
+    db_Close db_in;
+    db_Close db_gpcr;
+    db_Close db_pep;
+    print 'Done.';
+endfunction

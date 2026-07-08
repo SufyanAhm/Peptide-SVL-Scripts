@@ -1,0 +1,71 @@
+#svl
+global function main []
+    local target_resnums = [44, 48, 90, 94, 98, 119, 176, 256, 260, 289, 293];
+    local mdb_file = 'small_cyclic/ACKR4/SC_ackr4_complex_prepped.mdb';
+    local db = db_Open [mdb_file, 'read-write'];
+    local entries = db_Entries db;
+    local entry;
+    local idx = 0;
+
+    for entry in entries loop
+        idx = idx + 1;
+        local mol = db_ReadFields [db, entry, 'complex'];
+        Close [force: 1];
+        _moe_Create [mol, [selection:1, sets:1, view:1]];
+
+        local all_chains = Chains[];
+        local max_count = maxE cResidueCount all_chains;
+        local chainA = all_chains | cResidueCount all_chains == max_count;  // GPCR
+        local chainB = all_chains | cResidueCount all_chains <> max_count;  // peptide
+
+        // Create dummy atoms for pocket
+        local all_res = cat cResidues chainA;
+        local pocket_res = [];
+        local r;
+        for r in all_res loop
+            if indexof [rUID r, target_resnums] > 0 then
+                pocket_res = append [pocket_res, r];
+            endif
+        endloop
+        local pocket_atoms = cat rAtoms pocket_res;
+
+        local dck = oCreate 0;
+        local drk = oCreate dck;
+        local dummies = oCreate resize [drk, length pocket_atoms];
+        aSetElement [dummies, 'LP'];
+        aSetName [dummies, 'HYD'];
+        aSetPos [dummies, aPos pocket_atoms];
+        aSetTempFactor [dummies, rep [1.4, length pocket_atoms]];
+
+        local resA = cat cResidues chainA;
+        local resB = cat cResidues chainB;
+        local atomsA = cat rAtoms resA;
+        local atomsB = cat rAtoms resB;
+
+        aSetHidden [cat [atomsA, atomsB], 1];
+
+        rSetRibbonEnable [resA, 1];
+        rSetRibbonMode [resA, 'auto'];
+        rSetRibbonColorBy [resA, 'rgb'];
+        rSetRibbonRGB [resA, 0x00CC00];
+
+        rSetRibbonEnable [resB, 1];
+        rSetRibbonMode [resB, 'auto'];
+        rSetRibbonColorBy [resB, 'rgb'];
+        rSetRibbonRGB [resB, 0x00CCCC];
+
+        aSetHidden [dummies, 0];
+        aSetColorBy [dummies, 'rgb'];
+        aSetRGB [dummies, 0xFF0000];
+        aSetNucleusLook [dummies, 'sphere'];
+
+        local new_mol = _moe_Extract [Chains[], [], [selection:1, sets:1, view:1]];
+        db_Write [db, entry, [complex: new_mol]];
+
+        print twrite ['Entry {} done.', idx];
+    endloop
+
+    Close [force: 1];
+    db_Close db;
+    print 'Done.';
+endfunction
