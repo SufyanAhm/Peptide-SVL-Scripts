@@ -1,0 +1,166 @@
+#svl
+function Dock;
+
+global function main []
+    local outfile = '/home/zbg765/SA/MOE/small_cyclic/ACKR4/SC_ACKR4_19redocksepitopes_30ref.mdb';
+    local db_rec = db_Open ['small_cyclic/ACKR4/SC_ackr4_complex_prepped.mdb', 'read'];
+    local db_pep = db_Open ['small_cyclic/ACKR4/SC_ACKR4_min_peps.mdb', 'read'];
+
+    local rec_entries = db_Entries db_rec;
+    local pep_entries = db_Entries db_pep;
+    local n = min [length rec_entries, length pep_entries];
+
+    local dockopt = [
+        wall: ['',0,[0,0,0],[1000000,1000000,1000000],0],
+        csearch: 0,
+        confGenMethod: 'None',
+        ignoreMseq: 0,
+        placement: 'Protein-Protein',
+        placement_opt: [
+            maxpose: 100,
+            remaxpose: 100,
+            scoring: 'None',
+            rescoring: 'None',
+            csearch: 0,Greater than
+            confsearch: 3,
+            pp_gen_plif: 0,
+            pp_tdelta: 3.5,
+            pp_pose_limit: 1000,
+            pp_Ntop: 10000,
+            pp_maxpose: 100,
+            pp_hpatch: 1,
+            pp_auto_fab: 0,
+            ppset: 5,
+            pp_placement: 1,
+            mode: 'Protein-Protein',
+            outrmsd: 0,
+            silent: 0,
+            debug: 0
+        ],
+        scoring: 'None',
+        dup_placement: 1,
+        maxpose: 30,
+        refine: 'Rigid Body',
+        refine_opt: [
+            fixrec: 'Fix',
+            rigidlig: 1,
+            ed_map: 'Fo',
+            ed_f: 'Simulated',
+            ed_phi: 'Simulated',
+            ed_f2: 'Simulated',
+            ed_path: '',
+            ed_res: 2.5,
+            ed_surflevelD: 3,
+            cutoff: 6,
+            wholeres: 1,
+            mmgbvi: 1,
+            packsidechains: 1,
+            rigidPlanar: 0,
+            tether: 10,
+            gtest: 0.01,
+            maxit: 500,
+            OverrideSetup: 1,
+            k_potl: 100,
+            roffset: 0.4,
+            silent: 0,
+            debug: 0
+        ],
+        rescoring: 'None',
+        dup_refine: 1,
+        remaxpose: 10,
+        descexpr: '',
+        edsupport: 1,
+        tempDB: 0,
+        opendbv: 0,
+        task_parts: 1,
+        result_count: 0,
+        result_sum: 0,
+        dock_results: 'full',
+        run_mode: 'run',
+        resume: 1,
+        force: 1,
+        verbose: 1,
+        scoring_opt: [silent: 0, debug: 0],
+        rescoring_opt: [silent: 0, debug: 0],
+        sel_ent_only: 0,
+        sel_ent_only_rec: 0,
+        retainData: 1,
+        placement_fcn: 'dock_place_ppfft',
+        scoring_fcn: 'dock_score_none',
+        refine_fcn: 'dock_refine_RepackSC',
+        rescoring_fcn: 'dock_score_none',
+        ph4: []
+    ];
+
+    // Find highest completed pair_id — works for both fresh and resumed runs
+    local last_done = 0;
+    if ftype outfile === 'file' then
+        local db_check = db_Open [outfile, 'read'];
+        local check_entries = db_Entries db_check;
+        local ci;
+        for ci = 1, length check_entries loop
+            local pid = first db_ReadFields [db_check, check_entries(ci), 'pair_id'];
+            if pid > last_done then
+                last_done = pid;
+            endif
+        endloop
+        db_Close db_check;
+    endif
+    write ['Resuming from pair {}.\n', last_done + 1];
+
+    local idx;
+    for idx = last_done + 1, n loop
+        local rec_mol = db_ReadFields [db_rec, rec_entries(idx), 'complex'];
+        local pep_mol = db_ReadFields [db_pep, pep_entries(idx), 'peptide'];
+
+        Close [force: 1];
+        _moe_Create [rec_mol, [selection:1, sets:1, view:1]];
+        local rec_atoms = Atoms[];
+        local site = Atoms[] | aElement Atoms[] == 'LP';
+
+        _moe_Create [pep_mol, [selection:1, sets:1, view:1]];
+        local all_atoms = Atoms[];
+        local lig_atoms = diff [all_atoms, rec_atoms];
+
+        // Dock into a temp file to preserve PLIF metadata
+        local tfile = fnametemp 'temp/*.mdb';
+        Dock [rec_atoms, site, lig_atoms, tfile, dockopt];
+
+        // Tag entries in tfile with pair_id
+        local db_tmp = db_Open [tfile, 'read-write'];
+        db_CreateField [db_tmp, 'pair_id', 'int'];
+        local tmp_entries = db_Entries db_tmp;
+        local ei;
+        for ei = 1, length tmp_entries loop
+            db_Write [db_tmp, tmp_entries(ei), [pair_id: idx]];
+        endloop
+        db_Close db_tmp;
+
+        // First pair ever: fcopy tfile to outfile to preserve PLIF header
+        // Subsequent pairs: append entries into outfile
+        if last_done == 0 and idx == 1 then
+            fdelete outfile;
+            fcopy [tfile, outfile];
+        else
+            local db_out = db_Open [outfile, 'read-write'];
+            local db_src = db_Open [tfile, 'read'];
+            local src_entries = db_Entries db_src;
+            local ek;
+            for ek = 1, length src_entries loop
+                local data = db_Read [db_src, src_entries(ek)];
+                db_Write [db_out, 0, data];
+            endloop
+            db_Close db_src;
+            db_Close db_out;
+        endif
+
+        fdelete tfile;
+        Close [force: 1];
+        print twrite ['Pair {} done.\n', idx];
+    endloop
+
+    db_Close db_rec;
+    db_Close db_pep;
+    Close [force: 1];
+    print 'Done.\n';
+endfunction
