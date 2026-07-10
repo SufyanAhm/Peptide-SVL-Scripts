@@ -21,7 +21,7 @@ global function main []
             remaxpose: 100,
             scoring: 'None',
             rescoring: 'None',
-            csearch: 0,Greater than
+            csearch: 0,
             confsearch: 3,
             pp_gen_plif: 0,
             pp_tdelta: 3.5,
