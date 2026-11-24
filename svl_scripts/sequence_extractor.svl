@@ -1,7 +1,7 @@
 #svl
 global function main []
     local chains = Chains[];
-    local f = fopenw 'USTest_sequence.txt';
+    local f = fopenw 'output_txt.txt';
     local ci;
     for ci = 1, length chains loop
         local res = Residues chains(ci);
@@ -15,5 +15,5 @@ global function main []
         endloop
     endloop
     fclose f;
-    write ['Done. Saved to ACKR3_sequence.txt\n'];
+    write ['Done'];
 endfunction
