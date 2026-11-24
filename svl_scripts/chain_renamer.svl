@@ -1,6 +1,6 @@
 #svl
 global function main []
-    local db_path = 'ACKR4/ACKR4_pliffilteredset_results.mdb';
+    local db_path = 'Directory/file.mdb';
     local mol_field = 'mol';
     local name_field = 'name';
 
