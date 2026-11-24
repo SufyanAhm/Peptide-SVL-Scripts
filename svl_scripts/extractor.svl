@@ -1,8 +1,8 @@
 #svl
 global function main []
-    local mdb_in = 'small_cyclic/ACKR4/SC_ACKR4_prep_mini.mdb';
-    local mdb_gpcr = 'small_cyclic/ACKR4/SC_ACKR4_min_G.mdb';
-    local mdb_pep = 'small_cyclic/ACKR4/SC_ACKR4_min_p.mdb';
+    local mdb_in = 'Directory/inputfile(Proteins+peptides).mdb';
+    local mdb_gpcr = 'Directory/outputfile(Proteins).mdb';
+    local mdb_pep = 'Directory/outputfile(Peptides).mdb';
 
     local db_in = db_Open [mdb_in, 'read'];
     local db_gpcr = db_Open [mdb_gpcr, 'create'];
