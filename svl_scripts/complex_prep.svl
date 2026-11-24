@@ -1,7 +1,7 @@
 #svl
 global function main []
     local target_resnums = [1, 2, 3, 4, 5, 6];
-    local mdb_file = 'Directory/file.mdb.mdb';
+    local mdb_file = 'Directory/inputfile(proteins).mdb';
     local db = db_Open [mdb_file, 'read-write'];
     local entries = db_Entries db;
     local entry;
