@@ -2,9 +2,9 @@
 function Dock;
 
 global function main []
-    local outfile = '/home/zbg765/SA/MOE/small_cyclic/ACKR4/SC_ACKR4_19redocksepitopes_30ref.mdb';
-    local db_rec = db_Open ['small_cyclic/ACKR4/SC_ackr4_complex_prepped.mdb', 'read'];
-    local db_pep = db_Open ['small_cyclic/ACKR4/SC_ACKR4_min_peps.mdb', 'read'];
+    local outfile = 'Directory/outputfile(onedockingoutput).mdb';
+    local db_rec = db_Open ['Directory/inputfile(Proteins)', 'read'];
+    local db_pep = db_Open ['Directory/inputfile(peptides)', 'read'];
 
     local rec_entries = db_Entries db_rec;
     local pep_entries = db_Entries db_pep;
