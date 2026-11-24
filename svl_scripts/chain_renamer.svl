@@ -1,6 +1,6 @@
 #svl
 global function main []
-    local db_path = 'Directory/file.mdb';
+    local db_path = 'Directory/inputfile.mdb';
     local mol_field = 'mol';
     local name_field = 'name';
 
