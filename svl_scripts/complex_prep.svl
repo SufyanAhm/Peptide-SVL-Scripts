@@ -1,7 +1,7 @@
 #svl
 global function main []
-    local target_resnums = [44, 48, 90, 94, 98, 119, 176, 256, 260, 289, 293];
-    local mdb_file = 'small_cyclic/ACKR4/SC_ackr4_complex_prepped.mdb';
+    local target_resnums = [1, 2, 3, 4, 5, 6];
+    local mdb_file = 'Directory/file.mdb.mdb';
     local db = db_Open [mdb_file, 'read-write'];
     local entries = db_Entries db;
     local entry;
